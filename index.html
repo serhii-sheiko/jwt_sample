@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JWT Auth Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f13;
+    --surface: #16171d;
+    --surface-hover: #1e1f27;
+    --border: #2a2b35;
+    --accent: #22d68a;
+    --accent-dim: rgba(34, 214, 138, 0.12);
+    --danger: #f45866;
+    --danger-dim: rgba(244, 88, 102, 0.12);
+    --warn: #f0b23a;
+    --text: #e4e4e8;
+    --text-muted: #7a7b86;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Outfit', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 1.5rem;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    animation: fadeDown 0.5s ease-out;
+  }
+  .header h1 {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+  }
+  .header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.4rem;
+    font-weight: 300;
+  }
+
+  /* ── Card container ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 440px;
+    animation: fadeUp 0.45s ease-out;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 0.7rem 0;
+    text-align: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.25s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 15%;
+    width: 70%;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* ── Form ── */
+  .form-group { margin-bottom: 1.2rem; }
+  .form-group label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-group input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.2s;
+    margin-top: 0.5rem;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-danger {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid rgba(244, 88, 102, 0.25);
+  }
+  .btn-danger:hover { background: rgba(244, 88, 102, 0.18); }
+
+  /* ── Status toast ── */
+  .toast {
+    margin-top: 1rem;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    display: none;
+    word-break: break-all;
+    animation: fadeUp 0.3s ease-out;
+  }
+  .toast.success {
+    display: block;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(34, 214, 138, 0.2);
+  }
+  .toast.error {
+    display: block;
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid rgba(244, 88, 102, 0.2);
+  }
+
+  /* ── Dashboard (authenticated state) ── */
+  .dashboard { animation: fadeUp 0.45s ease-out; }
+  .dashboard .greeting {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+  .dashboard .sub {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-weight: 300;
+    margin-bottom: 1.6rem;
+  }
+
+  .token-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .token-box .label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.4rem;
+  }
+  .token-box .value {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--warn);
+    word-break: break-all;
+    line-height: 1.5;
+    max-height: 4.5rem;
+    overflow-y: auto;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .info-row:last-of-type { border-bottom: none; }
+  .info-row .k { color: var(--text-muted); }
+  .info-row .v { font-weight: 500; }
+
+  .btn-group {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 1.4rem;
+  }
+  .btn-group .btn { flex: 1; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid rgba(34, 214, 138, 0.3);
+  }
+  .btn-outline:hover { background: var(--accent-dim); }
+
+  /* ── Log panel ── */
+  .log-panel {
+    width: 100%;
+    max-width: 440px;
+    margin-top: 1.5rem;
+    animation: fadeUp 0.55s ease-out;
+  }
+  .log-panel summary {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.5rem 0;
+  }
+  .log-list {
+    margin-top: 0.5rem;
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .log-entry {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    line-height: 1.55;
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .log-entry .method { color: var(--accent); font-weight: 700; }
+  .log-entry .status-ok { color: var(--accent); }
+  .log-entry .status-err { color: var(--danger); }
+  .log-entry .url { color: var(--text-muted); }
+  .log-entry .ts { color: var(--text-muted); opacity: 0.6; float: right; }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>&gt;_ JWT Auth Demo</h1>
+  <p>FastAPI + JSON Web Tokens</p>
+</div>
+
+<!-- ============ AUTH CARD ============ -->
+<div class="card" id="authCard">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('login')">Login</button>
+    <button class="tab" onclick="switchTab('register')">Register</button>
+  </div>
+
+  <div id="loginForm">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="johndoe" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+  </div>
+
+  <div id="registerForm" style="display:none">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="regUser" placeholder="johndoe" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="regPass" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</div>
+
+<!-- ============ DASHBOARD CARD ============ -->
+<div class="card dashboard" id="dashCard" style="display:none">
+  <div class="greeting" id="greetUser">Hello, user</div>
+  <div class="sub">You are authenticated via JWT</div>
+
+  <div class="token-box">
+    <div class="label">Access Token</div>
+    <div class="value" id="showAccess">—</div>
+  </div>
+  <div class="token-box">
+    <div class="label">Refresh Token</div>
+    <div class="value" id="showRefresh">—</div>
+  </div>
+
+  <div id="meInfo"></div>
+
+  <div class="btn-group">
+    <button class="btn btn-outline" onclick="fetchMe()">GET /users/me</button>
+    <button class="btn btn-outline" onclick="doRefresh()">Refresh Tokens</button>
+  </div>
+  <div style="margin-top:0.6rem">
+    <button class="btn btn-danger" onclick="doLogout()">Logout</button>
+  </div>
+
+  <div id="dashToast" class="toast" style="margin-top:1rem"></div>
+</div>
+
+<!-- ============ REQUEST LOG ============ -->
+<details class="log-panel" id="logPanel">
+  <summary>Request log (<span id="logCount">0</span>)</summary>
+  <div class="log-list" id="logList"></div>
+</details>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+
+// ── State ──
+let accessToken = null;
+let refreshToken = null;
+let logEntries = 0;
+
+// ── Tab switching ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (tab === 'login') {
+    document.querySelectorAll('.tab')[0].classList.add('active');
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('registerForm').style.display = 'none';
+  } else {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
+  }
+  clearToast('toast');
+}
+
+// ── Toast helpers ──
+function showToast(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `toast ${type}`;
+}
+function clearToast(id) {
+  const el = document.getElementById(id);
+  el.className = 'toast';
+  el.textContent = '';
+}
+
+// ── Request logger ──
+function logRequest(method, url, status, detail) {
+  logEntries++;
+  document.getElementById('logCount').textContent = logEntries;
+  const list = document.getElementById('logList');
+  const time = new Date().toLocaleTimeString();
+  const ok = status >= 200 && status < 300;
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = `
+    <span class="method">${method}</span>
+    <span class="url">${url}</span>
+    <span class="${ok ? 'status-ok' : 'status-err'}">${status}</span>
+    <span class="ts">${time}</span>
+    ${detail ? `<br>${detail}` : ''}
+  `;
+  list.prepend(entry);
+}
+
+// ── API wrapper ──
+async function api(method, path, body, auth = false) {
+  const opts = { method, headers: {} };
+
+  if (body && !(body instanceof URLSearchParams)) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  } else if (body instanceof URLSearchParams) {
+    opts.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    opts.body = body.toString();
+  }
+
+  if (auth && accessToken) {
+    opts.headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  const res = await fetch(`${API}${path}`, opts);
+  const data = await res.json();
+  logRequest(method, path, res.status, res.ok ? null : (data.detail || ''));
+  return { ok: res.ok, status: res.status, data };
+}
+
+// ── Register ──
+async function doRegister() {
+  const username = document.getElementById('regUser').value.trim();
+  const password = document.getElementById('regPass').value;
+  if (!username || !password) return showToast('toast', 'Fill in both fields', 'error');
+
+  const { ok, data } = await api('POST', '/auth/register', { username, password });
+  if (ok) {
+    showToast('toast', `Registered "${username}" — now log in!`, 'success');
+    switchTab('login');
+    document.getElementById('loginUser').value = username;
+  } else {
+    showToast('toast', data.detail || 'Registration failed', 'error');
+  }
+}
+
+// ── Login ──
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  if (!username || !password) return showToast('toast', 'Fill in both fields', 'error');
+
+  // OAuth2PasswordRequestForm expects form-encoded data
+  const form = new URLSearchParams();
+  form.append('username', username);
+  form.append('password', password);
+
+  const { ok, data } = await api('POST', '/auth/login', form);
+  if (ok) {
+    accessToken = data.access_token;
+    refreshToken = data.refresh_token;
+    showDashboard(username);
+  } else {
+    showToast('toast', data.detail || 'Login failed', 'error');
+  }
+}
+
+// ── Show dashboard ──
+function showDashboard(username) {
+  document.getElementById('authCard').style.display = 'none';
+  document.getElementById('dashCard').style.display = 'block';
+  document.getElementById('greetUser').textContent = `Hello, ${username}`;
+  document.getElementById('showAccess').textContent = accessToken;
+  document.getElementById('showRefresh').textContent = refreshToken;
+  document.getElementById('meInfo').innerHTML = '';
+  clearToast('dashToast');
+}
+
+// ── Fetch /users/me ──
+async function fetchMe() {
+  const { ok, data } = await api('GET', '/users/me', null, true);
+  if (ok) {
+    document.getElementById('meInfo').innerHTML = `
+      <div class="info-row"><span class="k">username</span><span class="v">${data.username}</span></div>
+      <div class="info-row"><span class="k">registered</span><span class="v">${data.registered_at}</span></div>
+      <div class="info-row"><span class="k">message</span><span class="v">${data.message}</span></div>
+    `;
+    showToast('dashToast', 'Protected resource loaded', 'success');
+  } else {
+    showToast('dashToast', data.detail || 'Access denied', 'error');
+  }
+}
+
+// ── Refresh tokens ──
+async function doRefresh() {
+  const { ok, data } = await api('POST', '/auth/refresh', { refresh_token: refreshToken });
+  if (ok) {
+    accessToken = data.access_token;
+    refreshToken = data.refresh_token;
+    document.getElementById('showAccess').textContent = accessToken;
+    document.getElementById('showRefresh').textContent = refreshToken;
+    showToast('dashToast', 'Tokens refreshed', 'success');
+  } else {
+    showToast('dashToast', data.detail || 'Refresh failed', 'error');
+  }
+}
+
+// ── Logout ──
+function doLogout() {
+  accessToken = null;
+  refreshToken = null;
+  document.getElementById('authCard').style.display = 'block';
+  document.getElementById('dashCard').style.display = 'none';
+  clearToast('toast');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// ── Enter key support ──
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('authCard').style.display !== 'none') {
+    const loginVisible = document.getElementById('loginForm').style.display !== 'none';
+    loginVisible ? doLogin() : doRegister();
+  }
+});
+</script>
+</body>
+</html>
